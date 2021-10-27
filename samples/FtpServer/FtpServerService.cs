@@ -123,20 +123,27 @@ public class FtpServerService : BackgroundService
     {
         await using var registration = cancellationToken.Register(
             connectionContext.Abort);
-        var client = await _clientFactory.CreateClientAsync(connectionContext, cancellationToken);
-        var clientInfo = new FtpClientInformation(client, connectionContext);
-        lock (_activeClientsLock)
+        try
         {
-            _activeClients = _activeClients.Add(clientInfo);
+            var client = await _clientFactory.CreateClientAsync(connectionContext, cancellationToken);
+            var clientInfo = new FtpClientInformation(client, connectionContext);
+            lock (_activeClientsLock)
+            {
+                _activeClients = _activeClients.Add(clientInfo);
+            }
+
+            _logger.LogTrace("FTP client added");
+            await client.RunAsync(connectionContext.ConnectionClosed);
+
+            lock (_activeClientsLock)
+            {
+                _activeClients = _activeClients.Remove(clientInfo);
+                _logger.LogTrace("FTP client removed");
+            }
         }
-
-        _logger.LogTrace("FTP client added");
-        await client.WaitForExitAsync(connectionContext.ConnectionClosed);
-
-        lock (_activeClientsLock)
+        finally
         {
-            _activeClients = _activeClients.Remove(clientInfo);
-            _logger.LogTrace("FTP client removed");
+            await connectionContext.DisposeAsync();
         }
     }
 }

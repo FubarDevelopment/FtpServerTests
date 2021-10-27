@@ -6,6 +6,7 @@ using System.IO.Pipelines;
 
 using FubarDev.FtpServer.Abstractions;
 using FubarDev.FtpServer.Client.Common;
+using FubarDev.FtpServer.Client.External;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,7 +32,8 @@ using var host = new HostBuilder()
         services.Configure<ConsoleLoggerOptions>(
             opt => opt.LogToStandardErrorThreshold = LogLevel.Trace);
         services.AddSingleton<IFtpConnectionContextAccessor, FtpConnectionContextAccessor>();
-        services.AddSingleton<IHostedService, FtpConnection>();
+        services.AddSingleton<FtpConnection>();
+        services.AddSingleton<IHostedService, HostedFtpConnection>();
     })
     .Build();
 

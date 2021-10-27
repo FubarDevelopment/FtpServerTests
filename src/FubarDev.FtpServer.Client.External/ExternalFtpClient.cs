@@ -18,7 +18,7 @@ internal class ExternalFtpClient : IFtpClient
         _executionTask = executionTask;
     }
 
-    public async Task WaitForExitAsync(CancellationToken cancellationToken = default)
+    public async ValueTask RunAsync(CancellationToken cancellationToken = default)
     {
         await _executionTask;
     }

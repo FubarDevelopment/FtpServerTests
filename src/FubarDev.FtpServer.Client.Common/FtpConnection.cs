@@ -6,12 +6,11 @@ using System.Text;
 
 using FubarDev.FtpServer.Abstractions;
 
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace FubarDev.FtpServer.Client.Common;
 
-public class FtpConnection : BackgroundService
+public class FtpConnection
 {
     private readonly IFtpConnectionContextAccessor _connectionContextAccessor;
     private readonly ILogger<FtpConnection> _logger;
@@ -24,7 +23,7 @@ public class FtpConnection : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task RunAsync(CancellationToken stoppingToken = default)
     {
         var connectionContext = _connectionContextAccessor.Context ?? throw new InvalidOperationException();
         var transport = connectionContext.ControlConnection;

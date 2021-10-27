@@ -33,25 +33,9 @@ public class EmbeddedFtpClientFactory : IFtpClientFactory
         ConnectionContext connectionContext,
         CancellationToken cancellationToken = default)
     {
-        var cts = new CancellationTokenSource();
-        var transport = new DuplexPipe(
-            connectionContext.Transport.Input,
-            connectionContext.Transport.Output
-                .OnCompleted((_, _) => cts.Cancel()));
-        _connectionContextAccessor.Context = new FtpConnectionContext(transport);
-        var connection = ActivatorUtilities.CreateInstance<FtpConnection>(_serviceProvider);
-        
-        await connection.StartAsync(cancellationToken);
-        if (connection.ExecuteTask.IsCompleted)
-        {
-            _logger.LogWarning("FTP connection stopped too early");
-            await connection.ExecuteTask;
-        }
-
         var ftpClient = ActivatorUtilities.CreateInstance<EmbeddedFtpClient>(
             _serviceProvider,
-            connection,
-            cts);
+            connectionContext);
         return ftpClient;
     }
 }

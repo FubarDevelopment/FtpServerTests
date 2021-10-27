@@ -6,5 +6,5 @@ namespace FubarDev.FtpServer.Abstractions;
 
 public interface IFtpClient
 {
-    Task WaitForExitAsync(CancellationToken cancellationToken = default);
+    ValueTask RunAsync(CancellationToken cancellationToken = default);
 }

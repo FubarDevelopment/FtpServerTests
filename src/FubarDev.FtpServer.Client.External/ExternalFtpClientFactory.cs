@@ -9,6 +9,7 @@ using CliWrap;
 using FubarDev.FtpServer.Abstractions;
 
 using Microsoft.AspNetCore.Connections;
+using Microsoft.Extensions.DependencyInjection;
 
 using Nerdbank.Streams;
 
@@ -16,12 +17,15 @@ namespace FubarDev.FtpServer.Client.External;
 
 public class ExternalFtpClientFactory : IFtpClientFactory
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly Assembly _clientAssembly;
     private readonly string _clientExecutable;
     private readonly bool _startedWithDotnetTool;
 
-    public ExternalFtpClientFactory()
+    public ExternalFtpClientFactory(
+        IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         var startExecutable = Path.GetFileName(Environment.ProcessPath)
                               ?? throw new InvalidOperationException();
         _startedWithDotnetTool = startExecutable.ToLowerInvariant() switch
@@ -42,7 +46,7 @@ public class ExternalFtpClientFactory : IFtpClientFactory
         };
     }
 
-    public ValueTask<IFtpClient> CreateClientAsync(
+    public async ValueTask<IFtpClient> CreateClientAsync(
         ConnectionContext connectionContext,
         CancellationToken cancellationToken = default)
     {
@@ -62,10 +66,13 @@ public class ExternalFtpClientFactory : IFtpClientFactory
             .WithStandardOutputPipe(PipeTarget.ToStream(stream))
             .WithStandardInputPipe(PipeSource.FromStream(stream))
             .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
-            .ExecuteAsync();
+            .ExecuteAsync(CancellationToken.None);
 
-        var ftpClient = new ExternalFtpClient(cliTask);
-        return ValueTask.FromResult<IFtpClient>(ftpClient);
+        // var multiplexor = await MultiplexingStream.CreateAsync(stream, cancellationToken);
+        var ftpClient = ActivatorUtilities.CreateInstance<ExternalFtpClient>(
+            _serviceProvider,
+            cliTask);
+        return ftpClient;
     }
 
     private static string? ProbeExecutableFor(Assembly assembly)

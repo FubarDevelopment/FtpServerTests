@@ -18,8 +18,8 @@ using var host = new HostBuilder()
             .AddLogging()
             .AddOptions()
             .AddSingleton<IConnectionListenerFactory, SocketTransportFactory>()
-            //.AddEmbeddedClient()
-            .AddExternalClient()
+            .AddEmbeddedClient()
+            //.AddExternalClient()
             .AddSingleton<IHostedService, FtpServerService>();
         services
             .Configure<FtpServerOptions>(opt => { opt.ListenEndPoints.Add(new IPEndPoint(IPAddress.IPv6Any, 8021)); });
