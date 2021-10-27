@@ -17,8 +17,8 @@ internal class EmbeddedFtpClient : IFtpClient
 {
     private readonly ConnectionContext _connectionContext;
     private readonly IFtpConnectionContextAccessor _connectionContextAccessor;
-    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<EmbeddedFtpClient> _logger;
+    private readonly FtpConnection _connection;
 
     public EmbeddedFtpClient(
         ConnectionContext connectionContext,
@@ -28,23 +28,22 @@ internal class EmbeddedFtpClient : IFtpClient
     {
         _connectionContext = connectionContext;
         _connectionContextAccessor = connectionContextAccessor;
-        _serviceProvider = serviceProvider;
         _logger = logger;
+        _connection = ActivatorUtilities.CreateInstance<FtpConnection>(serviceProvider);
+        Control = new EmbeddedFtpClientControl(_connection);
     }
+
+    public IFtpClientControl Control { get; }
 
     public async ValueTask RunAsync(CancellationToken cancellationToken = default)
     {
-        var cts = new CancellationTokenSource();
         var transport = new DuplexPipe(
             _connectionContext.Transport.Input,
-            _connectionContext.Transport.Output
-                .OnCompleted((_, _) => cts.Cancel()));
+            _connectionContext.Transport.Output);
         _connectionContextAccessor.Context = new FtpConnectionContext(transport);
-        var connection = ActivatorUtilities.CreateInstance<FtpConnection>(_serviceProvider);
 
         using var stoppingTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken,
-            _connectionContext.ConnectionClosed);
+            cancellationToken);
         try
         {
             using var loggerScope = _logger.BeginScope(
@@ -55,7 +54,7 @@ internal class EmbeddedFtpClient : IFtpClient
                     ["RemoteEndPoint"] = _connectionContext.RemoteEndPoint,
                 });
             _logger.LogTrace("FTP connection starting");
-            await connection.RunAsync(stoppingTokenSource.Token);
+            await _connection.RunAsync(stoppingTokenSource.Token);
         }
         catch (OperationCanceledException)
         {
@@ -63,7 +62,7 @@ internal class EmbeddedFtpClient : IFtpClient
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Delay aborted with error {ErrorMessage}", exception.Message);
+            _logger.LogError(exception, "FTP connection aborted with error {ErrorMessage}", exception.Message);
         }
 
         _logger.LogTrace("FTP connection stopped");

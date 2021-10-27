@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Sjm.IO" Version="0.1.0" />
+        <PackageReference Include="Quartz.AspNetCore" Version="3.3.3" />
         <PackageReference Include="System.Interactive.Async" Version="5.0.0" />
     </ItemGroup>
 

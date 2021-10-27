@@ -4,7 +4,7 @@
 
 using System.Net;
 
-namespace FtpServerRestart01;
+namespace FtpServer;
 
 public class FtpServerOptions
 {

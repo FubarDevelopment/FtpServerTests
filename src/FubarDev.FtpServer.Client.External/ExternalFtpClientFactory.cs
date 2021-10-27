@@ -5,13 +5,12 @@
 using System.Reflection;
 
 using CliWrap;
+using CliWrap.Builders;
 
 using FubarDev.FtpServer.Abstractions;
 
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.DependencyInjection;
-
-using Nerdbank.Streams;
 
 namespace FubarDev.FtpServer.Client.External;
 
@@ -50,9 +49,15 @@ public class ExternalFtpClientFactory : IFtpClientFactory
         ConnectionContext connectionContext,
         CancellationToken cancellationToken = default)
     {
-        var stream = connectionContext.Transport.AsStream(false);
-        // var teeStream = new Sjm.IO.TeeStream(stream, writeTap: Console.OpenStandardOutput());
-        var cliTask = Cli.Wrap(_clientExecutable)
+        var data = new ExternalFtpClientData(connectionContext, this);
+        await data.InitializeAsync(cancellationToken);
+        var ftpClient = ActivatorUtilities.CreateInstance<ExternalFtpClient>(_serviceProvider, data);
+        return ftpClient;
+    }
+
+    internal Command CreateCommand(Action<ArgumentsBuilder>? configure = null)
+    {
+        return Cli.Wrap(_clientExecutable)
             .WithArguments(ab =>
             {
                 if (_startedWithDotnetTool)
@@ -60,19 +65,10 @@ public class ExternalFtpClientFactory : IFtpClientFactory
                     ab.Add(_clientAssembly.Location);
                     ab.Add("--");
                 }
+                
+                configure?.Invoke(ab);
             })
-            .WithValidation(CommandResultValidation.None)
-            // .WithCredentials(cb => cb.SetUserName("fubar-coder"))
-            .WithStandardOutputPipe(PipeTarget.ToStream(stream))
-            .WithStandardInputPipe(PipeSource.FromStream(stream))
-            .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
-            .ExecuteAsync(CancellationToken.None);
-
-        // var multiplexor = await MultiplexingStream.CreateAsync(stream, cancellationToken);
-        var ftpClient = ActivatorUtilities.CreateInstance<ExternalFtpClient>(
-            _serviceProvider,
-            cliTask);
-        return ftpClient;
+            .WithValidation(CommandResultValidation.None);
     }
 
     private static string? ProbeExecutableFor(Assembly assembly)

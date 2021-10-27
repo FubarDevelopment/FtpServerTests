@@ -6,5 +6,7 @@ namespace FubarDev.FtpServer.Abstractions;
 
 public interface IFtpClient
 {
+    IFtpClientControl Control { get; }
+
     ValueTask RunAsync(CancellationToken cancellationToken = default);
 }

@@ -14,6 +14,7 @@ public class FtpConnection
 {
     private readonly IFtpConnectionContextAccessor _connectionContextAccessor;
     private readonly ILogger<FtpConnection> _logger;
+    private DataHolder<DateTimeOffset> _lastActivity = new(DateTimeOffset.Now);
 
     public FtpConnection(
         IFtpConnectionContextAccessor connectionContextAccessor,
@@ -45,6 +46,8 @@ public class FtpConnection
                     break;
                 }
 
+                Interlocked.Exchange(ref _lastActivity, new(DateTimeOffset.Now));
+
                 var text = Encoding.UTF8.GetString(readResult.Buffer);
 
                 _logger.LogDebug(
@@ -70,4 +73,21 @@ public class FtpConnection
             await transport.Output.CompleteAsync();
         }
     }
+
+    public void Ping()
+    {
+        _logger.LogDebug("Ping received");
+    }
+
+    public DateTimeOffset GetLastActivity()
+    {
+        return _lastActivity.Data;
+    }
+
+    public TimeSpan GetInactivity()
+    {
+        return DateTimeOffset.UtcNow - _lastActivity.Data.ToUniversalTime();
+    }
+
+    private record DataHolder<T>(T Data);
 }

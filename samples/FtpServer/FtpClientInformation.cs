@@ -6,7 +6,7 @@ using FubarDev.FtpServer.Abstractions;
 
 using Microsoft.AspNetCore.Connections;
 
-namespace FtpServerRestart01;
+namespace FtpServer;
 
 public record FtpClientInformation(
     IFtpClient Client,

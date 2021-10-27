@@ -2,35 +2,30 @@
 // Copyright (c) Fubar Development Junker. All rights reserved.
 // </copyright>
 
-using System.Collections.Immutable;
 using System.Net;
 using System.Threading.Channels;
-
-using FubarDev.FtpServer.Abstractions;
 
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Options;
 
-namespace FtpServerRestart01;
+namespace FtpServer;
 
 public class FtpServerService : BackgroundService
 {
-    private readonly object _activeClientsLock = new();
-    private readonly IFtpClientFactory _clientFactory;
     private readonly Channel<ConnectionContext> _connectionContextChannel;
     private readonly IConnectionListenerFactory _connectionListenerFactory;
+    private readonly IFtpClientManager _clientManager;
     private readonly ILogger<FtpServerService> _logger;
     private readonly FtpServerOptions _serverOptions;
-    private volatile ImmutableList<FtpClientInformation> _activeClients = ImmutableList<FtpClientInformation>.Empty;
 
     public FtpServerService(
         IOptions<FtpServerOptions> serverOptions,
         IConnectionListenerFactory connectionListenerFactory,
-        IFtpClientFactory clientFactory,
+        IFtpClientManager clientManager,
         ILogger<FtpServerService> logger)
     {
         _connectionListenerFactory = connectionListenerFactory;
-        _clientFactory = clientFactory;
+        _clientManager = clientManager;
         _logger = logger;
         _serverOptions = serverOptions.Value;
         _connectionContextChannel = Channel.CreateUnbounded<ConnectionContext>();
@@ -65,9 +60,7 @@ public class FtpServerService : BackgroundService
             while (!stoppingToken.IsCancellationRequested)
             {
                 var connectionContext = await _connectionContextChannel.Reader.ReadAsync(stoppingToken);
-                _ = Task.Run(
-                    () => ExecuteClientAsync(connectionContext, stoppingToken),
-                    CancellationToken.None);
+                await _clientManager.StartAsync(connectionContext, stoppingToken);
             }
         }
         catch (OperationCanceledException)
@@ -115,35 +108,5 @@ public class FtpServerService : BackgroundService
             return new[] {new IPEndPoint(IPAddress.IPv6Any, 21)}.ToAsyncEnumerable();
 
         return options.ListenEndPoints.ToAsyncEnumerable();
-    }
-
-    private async Task ExecuteClientAsync(
-        ConnectionContext connectionContext,
-        CancellationToken cancellationToken)
-    {
-        await using var registration = cancellationToken.Register(
-            connectionContext.Abort);
-        try
-        {
-            var client = await _clientFactory.CreateClientAsync(connectionContext, cancellationToken);
-            var clientInfo = new FtpClientInformation(client, connectionContext);
-            lock (_activeClientsLock)
-            {
-                _activeClients = _activeClients.Add(clientInfo);
-            }
-
-            _logger.LogTrace("FTP client added");
-            await client.RunAsync(connectionContext.ConnectionClosed);
-
-            lock (_activeClientsLock)
-            {
-                _activeClients = _activeClients.Remove(clientInfo);
-                _logger.LogTrace("FTP client removed");
-            }
-        }
-        finally
-        {
-            await connectionContext.DisposeAsync();
-        }
     }
 }
