@@ -22,7 +22,7 @@ public class FtpClientInactivityJob : IJob
         {
             var client = clientInfo.Client;
             // clientInfo.ConnectionContext.ConnectionId;
-            var inactivity = await client.Control.GetInactivityAsync(context.CancellationToken);
+            var inactivity = await client.Control.GetInactivity(context.CancellationToken);
             if (inactivity >= _inactivityTimeSpan)
             {
                 clientInfo.ConnectionContext.Abort();

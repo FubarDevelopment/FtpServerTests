@@ -11,20 +11,24 @@ using FubarDev.FtpServer.Abstractions;
 
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FubarDev.FtpServer.Client.External;
 
 public class ExternalFtpClientFactory : IFtpClientFactory
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<ExternalFtpClientFactory> _logger;
     private readonly Assembly _clientAssembly;
     private readonly string _clientExecutable;
     private readonly bool _startedWithDotnetTool;
 
     public ExternalFtpClientFactory(
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        ILogger<ExternalFtpClientFactory> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
         var startExecutable = Path.GetFileName(Environment.ProcessPath)
                               ?? throw new InvalidOperationException();
         _startedWithDotnetTool = startExecutable.ToLowerInvariant() switch
@@ -49,7 +53,7 @@ public class ExternalFtpClientFactory : IFtpClientFactory
         ConnectionContext connectionContext,
         CancellationToken cancellationToken = default)
     {
-        var data = new ExternalFtpClientData(connectionContext, this);
+        var data = new ExternalFtpClientData(connectionContext, this, _logger);
         await data.InitializeAsync(cancellationToken);
         var ftpClient = ActivatorUtilities.CreateInstance<ExternalFtpClient>(_serviceProvider, data);
         return ftpClient;

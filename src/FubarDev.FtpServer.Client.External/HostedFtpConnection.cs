@@ -39,6 +39,8 @@ internal class HostedFtpConnection : BackgroundService
             new HeaderDelimitedMessageHandler(serverControlPipe, new JsonMessageFormatter());
 
         using var rpc = new JsonRpc(handler, _connection);
+        rpc.StartListening();
+        
         await _connection.RunAsync(stoppingToken);
     }
 }

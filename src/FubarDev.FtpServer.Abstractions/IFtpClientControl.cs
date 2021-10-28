@@ -6,7 +6,7 @@ namespace FubarDev.FtpServer.Abstractions;
 
 public interface IFtpClientControl
 {
-    Task PingAsync(CancellationToken cancellationToken = default);
-    Task<DateTimeOffset> GetLastActivityAsync(CancellationToken cancellationToken = default);
-    Task<TimeSpan> GetInactivityAsync(CancellationToken cancellationToken = default);
+    Task Ping(CancellationToken cancellationToken = default);
+    Task<DateTimeOffset> GetLastActivity(CancellationToken cancellationToken = default);
+    Task<TimeSpan> GetInactivity(CancellationToken cancellationToken = default);
 }

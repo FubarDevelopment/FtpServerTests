@@ -9,6 +9,7 @@ using CliWrap;
 using FubarDev.FtpServer.Abstractions;
 
 using Microsoft.AspNetCore.Connections;
+using Microsoft.Extensions.Logging;
 
 using Nerdbank.Streams;
 
@@ -19,6 +20,7 @@ namespace FubarDev.FtpServer.Client.External;
 internal class ExternalFtpClientData : IAsyncDisposable
 {
     private readonly ExternalFtpClientFactory _clientFactory;
+    private readonly ILogger _logger;
     private Stream? _clientTransportStream;
     private Stream? _serverTransportStream;
     private MultiplexingStream? _multiplexer;
@@ -29,10 +31,12 @@ internal class ExternalFtpClientData : IAsyncDisposable
 
     public ExternalFtpClientData(
         ConnectionContext connectionContext,
-        ExternalFtpClientFactory clientFactory)
+        ExternalFtpClientFactory clientFactory,
+        ILogger logger)
     {
         ConnectionContext = connectionContext;
         _clientFactory = clientFactory;
+        _logger = logger;
     }
 
     public ConnectionContext ConnectionContext { get; }
@@ -84,7 +88,9 @@ internal class ExternalFtpClientData : IAsyncDisposable
         //     new LengthHeaderMessageHandler(clientControlPipe, new MessagePackFormatter());
         IJsonRpcMessageHandler handler =
             new HeaderDelimitedMessageHandler(clientControlPipe, new JsonMessageFormatter());
-        _clientControl = JsonRpc.Attach<IFtpClientControl>(handler);
+        var rpc = new JsonRpc(handler);
+        _clientControl = rpc.Attach<IFtpClientControl>();
+        rpc.StartListening();
     }
 
     public async ValueTask DisposeAsync()

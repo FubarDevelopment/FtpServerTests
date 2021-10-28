@@ -16,18 +16,18 @@ internal class EmbeddedFtpClientControl : IFtpClientControl
         _connection = connection;
     }
 
-    public Task PingAsync(CancellationToken cancellationToken = default)
+    public Task Ping(CancellationToken cancellationToken = default)
     {
         _connection.Ping();
         return Task.CompletedTask;
     }
 
-    public Task<DateTimeOffset> GetLastActivityAsync(CancellationToken cancellationToken = default)
+    public Task<DateTimeOffset> GetLastActivity(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(_connection.GetLastActivity());
     }
 
-    public Task<TimeSpan> GetInactivityAsync(CancellationToken cancellationToken = default)
+    public Task<TimeSpan> GetInactivity(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(_connection.GetInactivity());
     }
